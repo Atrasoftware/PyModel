@@ -1,0 +1,66 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Mac os
+.DS_Store
+
+# Distribution / packaging
+.Python
+env/
+develop-eggs/
+eggs/
+.eggs/
+parts/
+sdist/
+.vagrant/
+var/
+*.egg-info/
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Translations
+*.mo
+*.pot
+
+# pyenv
+.python-version
+
+# dotenv
+.env
+
+# virtualenv
+.venv/
+venv/
+ENV/
+
+# redis
+dump.rdb
+
+# graphviz
+*.bak
+*.dot
+*.svg
+
+# generated FSM
+*FSM*
+
+# generated combined models
+samples/OrchidTempreg/PowerSpeed.py
+samples/PowerSwitchReset/PowerSpeed.py
+samples/Socket/socket.py
+samples/Socket/synchronous_graph.py
+samples/Stack/StackSynchronized.py
+
+# cnc_piston_disp programs
+samples/OrchidCncPistonDisp/programs/
+
+# trash
+pythonpath_append.txt

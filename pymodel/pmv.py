@@ -22,15 +22,15 @@ def make_opts(keys, options):
                       if not isinstance(k,tuple) else
                       ' '.join([('--%s %s' % (k[0], v))
                                  for v in options.__dict__[k[0]]]))
-                     for k in keys 
-                     if options.__dict__[k if not isinstance(k,tuple) 
+                     for k in keys
+                     if options.__dict__[k if not isinstance(k,tuple)
                                          else k[0]]])
 
 def command(cmd):
-    print cmd # DEBUG
+    print(cmd) # DEBUG
     status = os.system(cmd)
     if status:
-        print 'Failed: %s' % cmd  # status 0 means success
+        print(('Failed: %s' % cmd))  # status 0 means success
 
 def main():
     (options, args) = ViewerOptions.parse_args()

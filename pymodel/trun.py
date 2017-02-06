@@ -14,7 +14,7 @@ test = __import__(sys.argv[1])
 #   'pct.py -n 10 PowerSwitch'),
 #  ... ]
 
-for (description, cmd) in test.cases: 
-  print description
+for (description, cmd) in test.cases:
+  print(description)
   os.system(cmd)
-  print
+  print()

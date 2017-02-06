@@ -17,7 +17,7 @@ For example:
   python wsgirunner.py -p 8080 wsgidemo
 
 If wsgirunner.py is in a directory that is on the
-execution path, this can be shortened to 
+execution path, this can be shortened to
 
   wsgirunner.py -p 8080 wsgidemo
 
@@ -32,7 +32,7 @@ def parse_args():
 
 def print_help():
   parser.print_help()  # must have at least one arg, not optional
-    
+
 def main():
     (options, args) = parse_args()
     if not args:
@@ -41,9 +41,9 @@ def main():
     app_module = args[0]
     app = __import__(app_module)
     application = app.application
-    print "Running %s at http://localhost:%s/" \
-        % (app_module, options.port)
-    httpd = simple_server.WSGIServer(('', options.port), 
+    print(("Running %s at http://localhost:%s/" \
+        % (app_module, options.port)))
+    httpd = simple_server.WSGIServer(('', options.port),
                                      simple_server.WSGIRequestHandler)
     httpd.set_app(application)
     httpd.serve_forever()

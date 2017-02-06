@@ -95,7 +95,7 @@ Version 1.0 adds much new documentation and revises the rest:
   files have been replaced by .md (Markdown format) files.
 
 - The web pages in the www directory have been expanded and brought up
-  to date.  The content in these pages is drawn from .md files 
+  to date.  The content in these pages is drawn from md files 
   and .txt files in other PyModel directories.
 
 Version 1.0 reorganizes some code and directory structure:

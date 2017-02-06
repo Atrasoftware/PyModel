@@ -15,8 +15,8 @@ import observation_queue as observation
 
 from ProductModelProgram import ProductModelProgram
 
-class TimeoutException(Exception): 
-  pass 
+class TimeoutException(Exception):
+  pass
 
 def timeout_handler(signum, frame):
   raise TimeoutException()
@@ -48,7 +48,7 @@ def RunTest(options, mp, stepper, strategy, f, krun):
   """
   if options.output:
     f.write('  [\n')
-  isteps = 0  
+  isteps = 0
   failMessage = None # no failMessage indicates success
   observable_action = False
   infoMessage = ''
@@ -76,23 +76,23 @@ def RunTest(options, mp, stepper, strategy, f, krun):
       else:
         pass # go on, execute observable action in model BUT NOT stepper!
       # don't forget to reset observable_action at the bottom of while body
-      
+
     # controllable action
-    else: 
+    else:
       # EnabledTranstions returns: [(aname,args,result,next,properties),...]
-      enabled = mp.EnabledTransitions(cleanup) 
+      enabled = mp.EnabledTransitions(cleanup)
       (aname, args) = strategy.SelectAction(enabled)
       # exit conditions
-      if not aname: 
+      if not aname:
           if observation.asynch:
             # before exit, wait for item to appear in observation queue
             stepper.wait(options.timeout if options.timeout else None)
             continue # get observable action from queue
           # if not asynch, come directly here
-          # if asynch, only reach here if wait times out        
+          # if asynch, only reach here if wait times out
           if not cleanup:
               infoMessage = 'no more actions enabled'
-          break   
+          break
       elif cleanup and mp.Accepting():
         break
       else:
@@ -103,9 +103,9 @@ def RunTest(options, mp, stepper, strategy, f, krun):
     modelResult = mp.DoAction(aname, args) # Execute in model, get result
     qResult = quote(modelResult)
     if modelResult != None:
-      print aname if options.quiet else '%s%s / %s' % (aname, args, qResult)
+      print((aname if options.quiet else '%s%s / %s' % (aname, args, qResult)))
     else:
-      print aname if options.quiet else '%s%s' % (aname, args)
+      print((aname if options.quiet else '%s%s' % (aname, args)))
     if options.output:
       if qResult != None:
         f.write('    (%s, %s, %s),\n' % (aname, args, qResult))
@@ -125,10 +125,10 @@ def RunTest(options, mp, stepper, strategy, f, krun):
           if options.timeout:
             signal.alarm(0) # cancel timeout
           # stepper returns None to indicate success
-          if result == None: 
+          if result == None:
             pass # success, go on to next step
           # stepper returns string to indicate failure
-          elif isinstance(result, str):  
+          elif isinstance(result, str):
             failMessage = result # failure, prepare to print message
           # stepper may append observable action to observation_queue
           #  if so, will be detected by if observation_queue: at top of loop
@@ -139,7 +139,7 @@ def RunTest(options, mp, stepper, strategy, f, krun):
           failMessage = 'stepper raised exception: %s, %s' % \
               (e.__class__.__name__, e)
         if failMessage:
-          break 
+          break
     # not stepper or observable_action
     else:
       observable_action = False # must reset in all paths through while body
@@ -150,7 +150,7 @@ def RunTest(options, mp, stepper, strategy, f, krun):
       cleanup = True
       maxsteps += options.cleanupSteps
 
-    # end one test run step      
+    # end one test run step
   # end while executing test run steps
 
   # Print test run outcome, including explanation and accepting state status
@@ -160,16 +160,16 @@ def RunTest(options, mp, stepper, strategy, f, krun):
   if stepper and not mp.Accepting() and not failMessage:
       failMessage = infoMessage # test run ends in non-accepting state: fail
   if failMessage:
-    print '%3d. Failure at step %s, %s' % (krun, isteps, failMessage)
+    print(('%3d. Failure at step %s, %s' % (krun, isteps, failMessage)))
   else:
-    print '%3d. %s at step %s%s' % (krun, 'Success' if stepper else 'Finished',
-                                   isteps, 
-                                   (', %s' % infoMessage) if infoMessage else '')
+    print(('%3d. %s at step %s%s' % (krun, 'Success' if stepper else 'Finished',
+                                   isteps,
+                                   (', %s' % infoMessage) if infoMessage else '')))
   if options.output:
     f.write('  ],\n')
 
 
-def main():       
+def main():
   (options, args) = TesterOptions.parse_args()
 
   # args can include model programs, FSMs, test suites
@@ -196,7 +196,7 @@ def main():
     if hasattr(strategy, 'select_action'):
       strategy.SelectAction = strategy.select_action
   else:
-    strategy = imp.new_module('strategy') 
+    strategy = imp.new_module('strategy')
     strategy.SelectAction = SelectAction # handle default strategy in same way
 
   if options.seed:            # NB -s 0 has no effect, by definition!
@@ -205,7 +205,7 @@ def main():
   f = None # must be bound when passed to RunTest
   if options.output:
     f = open("%s.py" % options.output, 'w')
-    f.write('\n# %s' % os.path.basename(sys.argv[0])) # echo command line ... 
+    f.write('\n# %s' % os.path.basename(sys.argv[0])) # echo command line ...
     f.write(' %s\n' % ' '.join(['%s' % arg for arg in sys.argv[1:]])) # ...etc.
     f.write('\n# actions here are just labels, but must be symbols with __name__ attribute\n\n')
     f.writelines([ 'def %s(): pass\n' % aname for aname in mp.anames ])
@@ -229,9 +229,9 @@ def main():
       if stepper:
         stepper.Reset()
     RunTest(options, mp, stepper, strategy, f, k)
-    k += 1     
+    k += 1
   if k > 1:
-    print 'Test finished, completed %s runs' % k
+    print(('Test finished, completed %s runs' % k))
 
   if options.output:
     f.write(']')

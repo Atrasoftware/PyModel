@@ -1,5 +1,5 @@
 """
-Interface to a model program (python module) used by ProductModelProgram 
+Interface to a model program (python module) used by ProductModelProgram
 """
 
 # Actions a are still function objects (not aname strings) here
@@ -10,6 +10,7 @@ import copy
 import inspect
 import itertools
 from model import Model
+import collections
 
 class ModelProgram(Model):
 
@@ -19,7 +20,7 @@ class ModelProgram(Model):
   def post_init(self):
     """
     Now that all modules have been imported and executed their __init__
-     do a postprocessing pass 
+     do a postprocessing pass
      to process metadata that might be affected by configuration modules
     """
     # Do all of this work here rather than in __init__
@@ -71,18 +72,18 @@ class ModelProgram(Model):
     else:
       args = () # no arguments anywhere, args must have this value
     domains = [ self.module.domains[a][arg]() # evaluate state-dependent domain
-                if callable(self.module.domains[a][arg]) 
+                if isinstance(self.module.domains[a][arg], collections.Callable)
                 else self.module.domains[a][arg] # look up static domain
                 for arg in args if a in self.module.domains ]
     combination = self.module.combinations.get(a, 'all')  # default is 'all'
     if combination == 'cases': # as many args as items in smallest domain
-      argslists = zip(*domains)
+      argslists = list(zip(*domains))
     elif combination == 'all':   # Cartesian product
       argslists = itertools.product(*domains)
     # might be nice to support 'pairwise' also
-    # return tuple not list, hashable so it can be key in dictionary 
+    # return tuple not list, hashable so it can be key in dictionary
     # also handle special case (None,) indicates empty argslist in domains
-    return tuple([() if x == (None,) else x for x in argslists ]) 
+    return tuple([() if x == (None,) else x for x in argslists ])
 
   def ParamGen(self):
     #print 'ModelProgram ParamGen for', self.module.__name__ #DEBUG
@@ -91,7 +92,7 @@ class ModelProgram(Model):
     self.argslists = dict([(a, self.make_argslist(a))
                            for a in self.actions
                            if not a in self.module.observables ])
-    
+
   def TrueDefault(self):
     return True
 
@@ -104,8 +105,8 @@ class ModelProgram(Model):
     try:
       self.module.Reset()
     except AttributeError: # Reset is optional, but there is no default
-      print 'No Reset function for model program %s' % self.module.__name__
-      sys.exit()       
+      print(('No Reset function for model program %s' % self.module.__name__))
+      sys.exit()
 
   def ActionEnabled(self, a, args):
     """
@@ -120,8 +121,8 @@ class ModelProgram(Model):
       nargs = len(args)
       # nparams == 0 means match any args
       if nparams > 0 and nparams != nargs:
-        print 'Error: %s needs %s arguments, got %s.  Check parameter generator.' %\
-            (a_enabled.__name__, nparams, nargs)
+        print(('Error: %s needs %s arguments, got %s.  Check parameter generator.' %\
+            (a_enabled.__name__, nparams, nargs)))
         sys.exit(1) # Don't return, just exit with error status
       else:
         if nparams > 0:
@@ -129,7 +130,7 @@ class ModelProgram(Model):
         else:
           return a_enabled() # nparams == 0 means match any args
 
-  def Transitions(self, actions, argslists): 
+  def Transitions(self, actions, argslists):
     """
     Return tuple for all enabled transitions:
      (action, args, result, next state, properties)
@@ -140,9 +141,9 @@ class ModelProgram(Model):
       enabled += [(a, args) + self.GetNext(a,args) # (a,args,result,next,prop's)
                   for args in argslists[a] if self.ActionEnabled(a, args) ]
     return [(a,args,result,next,properties)
-            for (a,args,result,next,properties) in enabled 
+            for (a,args,result,next,properties) in enabled
             if properties['statefilter']]
-  
+
   def EnabledTransitions(self, argslists, cleanup=False):
     """
     Return tuple for all enabled observable and controllable transitions:
@@ -179,14 +180,14 @@ class ModelProgram(Model):
     Restore state
     """
     self.module.__dict__.update(state)
-     
+
   def GetNext(self, a, args):
     """
-    Return result and next state, given action and args. 
+    Return result and next state, given action and args.
     Nondestructive, restores state.
     also return dict. of properties of next state as third element in tuple
     """
-    saved = self.Current()    
+    saved = self.Current()
     result = self.DoAction(a, args)
     next = self.Current()
     properties = self.Properties() # accepting state, etc.
