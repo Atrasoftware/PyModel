@@ -7,7 +7,7 @@ cases = [
      'pma Scenarios'),
 
     ('Scenarios module with four runs, by itself',
-     'pmg ScenariosFSM'),
+     'pmg -n ScenariosFSM'),
 
     ('Scenarios module with four runs, by itself',
      'dotsvg ScenariosFSM'),
@@ -16,7 +16,7 @@ cases = [
      'pma OrchidCncPistonDisp'),
 
     ('Generate dot graphics commands from generated OrchidCncPistonDispFSM',
-     'pmg OrchidCncPistonDispFSM'),
+     'pmg -n OrchidCncPistonDispFSM'),
 
     ('Generate SVG file from dot commands',
      'dotsvg OrchidCncPistonDispFSM'),

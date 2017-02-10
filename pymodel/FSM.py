@@ -28,17 +28,18 @@ class FSM(Model):
     else:
       self.actions = list(self.module.actions) # copy
     Model.post_init(self) # uses self.actions
-    # Construct self.graph like self.module.graph 
+    # Construct self.graph like self.module.graph
     #  BUT also accounts for include, exclude via self.actions
-    self.graph = [ (current, (action,args,result), next) 
+    self.graph = [ (current, (action,args,result), next)
                    for (current, (action,args,result), next) in
                    self.module.graph if action in self.actions ]
+    print("GGGRRRAAAAAPPPPHHH         ", self.graph)
     # prepare for first run
     self.current = self.module.initial # raise exception if module is not FSM
 
 
   def actions_in_graph(self):
-    return tuple(set([ action for (current, (action,args,result), next) in 
+    return tuple(set([ action for (current, (action,args,result), next) in
                        self.module.graph])) # not self.graph, here ONLY
 
   def make_properties(self, state):
@@ -47,7 +48,7 @@ class FSM(Model):
 
   def Properties(self):
     return self.make_properties(self.current)
-  
+
   def Reset(self): # needed by stepper
     self.current = self.module.initial
 
@@ -57,8 +58,8 @@ class FSM(Model):
     """
     if cleanup:
       graph = [(current,(action,args,result),next)
-                for (current,(action,args,result),next) in self.graph 
-                if action in self.module.cleanup] 
+                for (current,(action,args,result),next) in self.graph
+                if action in self.module.cleanup]
     else:
       graph = self.graph
     return graph
@@ -70,28 +71,30 @@ class FSM(Model):
     # no cleanup check here
     # any args matches empty arguments in FSM
     return any([(a == action and (not arguments or args == arguments))
-                for (current,(action, arguments, result),next) 
+                for (current,(action, arguments, result),next)
                 in self.graph
                 if current == self.current ])
 
   def EnabledTransitions(self, cleanup=False):
     """
-    Return list tuples for all enabled actions: 
+    Return list tuples for all enabled actions:
     (action, args, next state, properties)
     """
     graph = self.CleanupGraph(cleanup)
+    print("*******************GGGRRRAAAAAPPPPHHH         ", graph)
+
     return [(action, args, result, next, self.make_properties(next))
-            for (current,(action,args,result),next) in graph 
+            for (current,(action,args,result),next) in graph
             if current == self.current ]
 
   def DoAction(self, a, arguments):
     ts = [(current,(action,args,result),next)
-             for (current,(action,args,result),next) in self.graph 
-             if current == self.current and action == a 
+             for (current,(action,args,result),next) in self.graph
+             if current == self.current and action == a
              and args == arguments[0:len(args)]] #ignore extra trailing args
     # print 'List ts %s' % ts # DEBUG
     # Might be nondet. FSM: for now, just pick first transition that matches
-    current, (action,args,result), self.current = ts[0] 
+    current, (action,args,result), self.current = ts[0]
     return result
 
   def Current(self):

@@ -8,6 +8,7 @@ from copy import deepcopy
 
 # rebind in explore
 
+counter = 0
 anames = list()
 
 states = list() # state's index here is its state number in lists, graph below
@@ -24,11 +25,11 @@ unsafe = list()
 graph = list() # a set (no dups) but we want a sequence to see them in order
 
 def explore(mp, maxTransitions):
-    # some globals may not be needed; code only mutates collection *contents*, 
+    # some globals may not be needed; code only mutates collection *contents*,
     # as in finished, deadend
-    global anames, states, graph, accepting, frontier, unsafe
+    global anames, states, graph, accepting, frontier, unsafe, counter
     anames = mp.anames
-    explored = list() 
+    explored = list()
     fsm = list() # list of transitions with mp states not state numbers
     more_runs = True # TestSuite might have multiple runs
     while more_runs:
@@ -47,8 +48,8 @@ def explore(mp, maxTransitions):
         current = frontier[0]   # head, keep in mind current might lead nowhere
         frontier = frontier[1:] # tail
         icurrent = states.index(current) # might already be there
-        #print 'current %s' % current # DEBUG
-        #print '   frontier %s' % frontier # DEBUG
+        print('current %s' % current) # DEBUG
+        print ('   frontier %s' % frontier) # DEBUG
         explored.append(current) # states we checked, some might lead nowhere
         mp.Restore(deepcopy(current)) # assign state in mp, need deepcopy here
         transitions = mp.EnabledTransitions(list()) # all actions, not cleanup
@@ -57,16 +58,20 @@ def explore(mp, maxTransitions):
             finished.append(icurrent)
           else:
             deadend.append(icurrent)
-        # print 'current %s, transitions %s' % (current, transitions) # DEBUG
+        print ('current %s, transitions %s' % (current, transitions)) # DEBUG
         for (aname, args, result, next, next_properties) in transitions:
           # EnabledTransitions doesn't return transitions where not statefilter
-          # if next_properties['statefilter']: 
+          # if next_properties['statefilter']:
             if len(graph) < maxTransitions:
                 if next not in explored and next not in frontier:
                     # append for breadth-first, push on head for depth-first
                     frontier.append(next) # frontier contents are already copies
                 transition = (current, (aname, args, result), next)
+                print ('transition', transition) # DEBUG
+                # current = next # IDEA if actions are "not isolated"
                 if transition not in fsm:
+                    counter += 1
+                    print(counter, "  :  !!!!!!!!!!!!!!!!!!!!",transition,"!!!!!!!!!!!!!!!")
                     fsm.append(transition)
                     if current not in states:
                         states.append(current)
@@ -84,6 +89,9 @@ def explore(mp, maxTransitions):
                     if not next_properties['stateinvariant'] and inext not in unsafe:
                         unsafe.append(inext)
                     # TK likewise dead states ... ?
+                if (current != next):
+                    print("cooooccccoooobbbellllooooooooo")
+                    continue
             else: # found transition that will not be included in graph
                 frontier.insert(0,current) # not completely explored after all
                 # explored.remove(current) # not necessary
@@ -91,7 +99,8 @@ def explore(mp, maxTransitions):
             # end if < ntransitions else ...
         # end for transitions
       # end while frontier
-     
+      mp.RestartModel()
+    #   explore(mp, maxTransitions)
       # continue exploring test suite with multiple runs
       more_runs = False
       if mp.TestSuite:
@@ -101,7 +110,7 @@ def explore(mp, maxTransitions):
           except StopIteration: # raised by TestSuite Reset after last run
               pass # no more runs, we're done
     # end while more_runs
-        
+
 
 def actiondef(aname):
     return 'def %s(): pass' % aname
@@ -139,7 +148,7 @@ def quote_string(x): # also appears in Dot
 def transition(t):
     # return '%s' % (t,) # simple but returns quotes around action name
     current, (action, args, result), next = t
-    return '(%s, (%s, %s, %s), %s)' % (current, action, args, 
+    return '(%s, (%s, %s, %s), %s)' % (current, action, args,
                                        quote_string(result), next)
 
 def save(name):

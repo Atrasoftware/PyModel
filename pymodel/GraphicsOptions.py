@@ -42,12 +42,14 @@ parser = OptionParser(usage=usage)
 def parse_args():
     parser.add_option('-o', '--output', type='string', default='',
                   help = 'Output file name (not including .dot), default is <fsm argument>')
-    parser.add_option('-l', '--transitionLabels', type='string', 
+    parser.add_option('-l', '--transitionLabels', type='string',
                       default='action',
                       help = 'Transition labels: action, name, or none, default is action')
-    parser.add_option('-x', '--noStateTooltip', action="store_true", dest="noStateTooltip", 
+    parser.add_option('-n', '--nodesLabels', action="store_true", dest="nodesLabels",
+                      help = 'Nodes labels: state or index, default is index')
+    parser.add_option('-x', '--noStateTooltip', action="store_true", dest="noStateTooltip",
                     help = 'Omit tooltips from state bubbles (to work around dot svg problem)')
-    parser.add_option('-y', '--noTransitionTooltip', action="store_true", dest="noTransitionTooltip", 
+    parser.add_option('-y', '--noTransitionTooltip', action="store_true", dest="noTransitionTooltip",
                     help = 'Omit tooltips from transition arrows')
     return parser.parse_args()
 

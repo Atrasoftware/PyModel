@@ -6,6 +6,7 @@ PyModel Analyzer - generate FSM from product model program
 import Analyzer
 import AnalyzerOptions
 from ProductModelProgram import ProductModelProgram
+import itertools
 
 def main():
     (options, args) = AnalyzerOptions.parse_args()
@@ -14,7 +15,12 @@ def main():
         exit()
     else:
         mp = ProductModelProgram(options, args)
-        Analyzer.explore(mp, options.maxTransitions)
+
+        # TODO::::::: for ALL PERMUTATIONS OF mp.mp.[a].actions
+        for a in args:
+            for permutation in itertools.permutations(mp.mp[a].actions):
+                mp.mp[a].actions = permutation
+                Analyzer.explore(mp, options.maxTransitions)
         print(('%s states, %s transitions, %s accepting states, %s unsafe states' % \
             (len(Analyzer.states),len(Analyzer.graph),len(Analyzer.accepting),len(Analyzer.unsafe))))
         mname = options.output if options.output else '%sFSM' % args[0]

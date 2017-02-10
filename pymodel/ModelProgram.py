@@ -39,6 +39,11 @@ class ModelProgram(Model):
       self.module.StateInvariant = self.module.state_invariant
     if hasattr(self.module, 'reset'):
       self.module.Reset = self.module.reset
+    if hasattr(self.module, 'check_state_changes'):
+      print("!!!!!!!!!!!!!!!CONTROLLO")
+      self.check_state_changes = True
+    if hasattr(self.module, 'restart'):
+      self.restart = self.module.restart
 
     # assign defaults to optional attributes
     # cleanup and observables are handled in Models base class
@@ -54,6 +59,12 @@ class ModelProgram(Model):
       self.module.StateFilter = self.TrueDefault
     if not hasattr(self.module, 'StateInvariant'):
       self.module.StateInvariant = self.TrueDefault
+    if not hasattr(self.module, 'check_state_changes'):
+      print("!!!!!!!!!!  NON  !!!!!CONTROLLO")
+      self.check_state_changes = False
+    if not hasattr(self.module, 'restart'):
+      self.restart = self.TrueDefault
+
 
     # Make copies of collections that may be altered by post_init
     self.actions =  list(self.module.actions)
@@ -96,10 +107,11 @@ class ModelProgram(Model):
   def TrueDefault(self):
     return True
 
-  def Properties(self):
+  def Properties(self, stateChanged=False):
     return  { 'accepting': self.module.Accepting(),
               'statefilter': self.module.StateFilter(),
-              'stateinvariant': self.module.StateInvariant() }
+              'stateinvariant': self.module.StateInvariant(),
+              'statechanged': stateChanged}
 
   def Reset(self):
     try:
@@ -138,8 +150,18 @@ class ModelProgram(Model):
     """
     enabled = list()
     for a in actions:
-      enabled += [(a, args) + self.GetNext(a,args) # (a,args,result,next,prop's)
-                  for args in argslists[a] if self.ActionEnabled(a, args) ]
+      for args in argslists[a]:
+        if self.ActionEnabled(a, args):
+          next_action = self.GetNext(a,args)
+          enabled += [(a, args) + next_action # (a,args,result,next,prop's)
+                     ]
+        if self.check_state_changes:
+          print("============================", next_action)
+          if (next_action[2]['statechanged']):
+            return [(a,args,result,next,properties)
+                    for (a,args,result,next,properties) in enabled
+                    if properties['statefilter']]
+
     return [(a,args,result,next,properties)
             for (a,args,result,next,properties) in enabled
             if properties['statefilter']]
@@ -189,7 +211,15 @@ class ModelProgram(Model):
     """
     saved = self.Current()
     result = self.DoAction(a, args)
+    print("&&&&&&&&&&&&&&&&&RRESSSULLLLLTTT", result)
     next = self.Current()
-    properties = self.Properties() # accepting state, etc.
+    print("&&&&&&&&&&&&&&&&&SAVED ", saved, "NNEXTTT ", next)
+    stateChanged = False if (saved == next) else True
+    properties = self.Properties(stateChanged) # accepting state, etc.
+    print("&&&&&&&&&&&&&&&&&PROPERTIES", properties)
     self.Restore(saved)
+    print("&&&&&&&&&&&&&&&&&PROPERTIES", properties)
     return (result, next, properties)
+
+  def RestartModel(self):
+      return self.restart()

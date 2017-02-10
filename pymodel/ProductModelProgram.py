@@ -1,5 +1,5 @@
 """
-ProductModelProgram 
+ProductModelProgram
 
 Uniform interface to every kind of model: ModelProgram, FSM, TestSuite.
 
@@ -7,7 +7,7 @@ This module is used by both the analyzer and the tester.
 
 This module uses *composition* to construct and use the *product* of
 all the models in the session.
- 
+
 This module performs composition, so it must identify actions by name
 strings (which are the same in all the composed models) not function
 objects (which are specific to each model's module).
@@ -25,9 +25,78 @@ from FSM import FSM
 from TestSuite import TestSuite
 from ModelProgram import ModelProgram
 from functools import reduce
-   
+import collections
+
+
+class OrderedSet(collections.MutableSet):
+
+    def __init__(self, iterable=None):
+        self.end = end = []
+        end += [None, end, end]         # sentinel node for doubly linked list
+        self.map = {}                   # key --> [key, prev, next]
+        if iterable is not None:
+            self |= iterable
+
+    def __len__(self):
+        return len(self.map)
+
+    def __contains__(self, key):
+        return key in self.map
+
+    def add(self, key):
+        if key not in self.map:
+            end = self.end
+            curr = end[1]
+            curr[2] = end[1] = self.map[key] = [key, curr, end]
+
+    def discard(self, key):
+        if key in self.map:
+            key, prev, next = self.map.pop(key)
+            prev[2] = next
+            next[1] = prev
+
+    def __iter__(self):
+        end = self.end
+        curr = end[2]
+        while curr is not end:
+            yield curr[0]
+            curr = curr[2]
+
+    def __reversed__(self):
+        end = self.end
+        curr = end[1]
+        while curr is not end:
+            yield curr[0]
+            curr = curr[1]
+
+    def pop(self, last=True):
+        if not self:
+            raise KeyError('set is empty')
+        key = self.end[1][0] if last else self.end[2][0]
+        self.discard(key)
+        return key
+
+    def __repr__(self):
+        if not self:
+            return '%s()' % (self.__class__.__name__,)
+        return '%s(%r)' % (self.__class__.__name__, list(self))
+
+    def __eq__(self, other):
+        if isinstance(other, OrderedSet):
+            return len(self) == len(other) and list(self) == list(other)
+        return set(self) == set(other)
+
+
+if __name__ == '__main__':
+    s = OrderedSet('abracadaba')
+    t = OrderedSet('simsalabim')
+    print(s | t)
+    print(s & t)
+    print(s - t)
+
+
 class ProductModelProgram(object):
- 
+
   def __init__(self, options, args):
     self.TestSuite = False # used by pmt nruns logic
     self.module = dict()  # dict of modules keyed by name
@@ -35,24 +104,28 @@ class ProductModelProgram(object):
 
     # Populate self.module and self.mp from modules named in command line args
     # Models that users write are just modules, not classes (types)
-    #  so we find out what type to wrap each one in 
+    #  so we find out what type to wrap each one in
     #  by checking for one of each type's required attributes using hasattr
     for mname in args: # args is list of module name
-      self.module[mname] = __import__(mname) 
+      self.module[mname] = __import__(mname)
       if hasattr(self.module[mname], 'graph'):
+        print("^^^^^^^^^^^^^^^^^^1111111111")
         self.mp[mname] = FSM(self.module[mname],options.exclude,options.action)
       # for backwards compatibility we accept all of these test_suite variants
-      elif (hasattr(self.module[mname], 'testSuite') or 
-            hasattr(self.module[mname], 'testsuite') or 
+      elif (hasattr(self.module[mname], 'testSuite') or
+            hasattr(self.module[mname], 'testsuite') or
             hasattr(self.module[mname], 'test_suite')):
-        self.mp[mname] = TestSuite(self.module[mname], 
+        print("^^^^^^^^^^^^^^^^^^22222222222")
+        self.mp[mname] = TestSuite(self.module[mname],
                                    options.exclude, options.action)
         self.TestSuite = True # used by pmt nruns logic
       elif self.module[mname].__doc__.strip().upper().startswith('PYMODEL CONFIG'):
+        print("^^^^^^^^^^^^^^^^^^33333333333333")
         pass # configuration module, merely importing it did all the work
       else:
         # got this far, should be a ModelProgram -- if not, crash
-        self.mp[mname] = ModelProgram(self.module[mname], 
+        print("^^^^^^^^^^^^^^^^^^4444444444444444")
+        self.mp[mname] = ModelProgram(self.module[mname],
                                       options.exclude, options.action)
 
     # Now that all modules have been imported and executed their __init__
@@ -63,12 +136,12 @@ class ProductModelProgram(object):
 
     # set of all anames in all model programs - the vocabulary of the product
     self.anames = set().union(*[set([a.__name__ for a in mp.actions ])
-                                for mp in list(self.mp.values())])    
+                                for mp in list(self.mp.values())])
     # print 'anames %s' % self.anames # DEBUG
 
     # set of anames of all observable actions in all model programs
     # observables obtain arg values from the environment, not parameter gen.
-    self.observables = set().union(*[set([a.__name__ 
+    self.observables = set().union(*[set([a.__name__
                                           for a in mp.module.observables])
                                      for mp in list(self.mp.values())])
                                      # FSM and TestSuite must have .observables
@@ -76,11 +149,11 @@ class ProductModelProgram(object):
 
     # dict from aname to set of all m where aname is in vocabulary
     self.vocabularies = \
-        dict([(aname, set([m for m in self.mp if aname in 
+        dict([(aname, set([m for m in self.mp if aname in
                            [a.__name__ for a in self.mp[m].actions]]))
               for aname in self.anames])
     # print 'vocabularies %s' % self.vocabularies # DEBUG
-                             
+
   # ProductModelProgram only provides methods etc. called by test runner etc.:
   # EnabledActions(cleanup), Properties(), DoAction(a,args), Reset(), TestSuite
   # BUT not methods used internally in mp classes: Churrent, Restore, GetNext
@@ -101,11 +174,11 @@ class ProductModelProgram(object):
     """
     This is where composition happens!
     (aname,args,result) is enabled in the product if it is enabled,
-    OR (aname, (), None) with empty args and None result is enabled 
-    in every machine where aname is in the vocabulary. 
+    OR (aname, (), None) with empty args and None result is enabled
+    in every machine where aname is in the vocabulary.
     Returns list: [(aname, args, result, next, properties), ... ]
      third item result is the same value from all mp, or None
-     fourth item next is dict of mp name to that mp's next state: 
+     fourth item next is dict of mp name to that mp's next state:
        (m1:next1,m2:current2,m3:next3,...),...]
       or to its current state if aname is not in that mp vocabulary
      fifth item properties is dict of property name to value in next state:
@@ -116,53 +189,59 @@ class ProductModelProgram(object):
     for mp in list(self.mp.values()):
       if isinstance(mp, ModelProgram):
         mp.ParamGen()
-    
-    # Built up dicts from mp name to list of all its enabled 
-    #  (action, args, result, next state, properties)
 
+    # Built up dicts from mp name to list of all its enabled
+    #  (action, args, result, next state, properties)
+    print("00000000000000000000")
     # dict for FSM and TestSuite only, they might provide args for observables
     enabledScenarioActions = \
         dict([(m, self.mp[m].EnabledTransitions(cleanup))
               for m in self.mp if (not isinstance(self.mp[m], ModelProgram))])
-    # print 'enabledScenarioActions %s' % enabledScenarioActions # DEBUG
-
+    print('enabledScenarioActions', enabledScenarioActions) # DEBUG
+    print("11111111111111111111")
     # dict from action to sequence of argslists
     argslists = defaultdict(list)
     for transitions in list(enabledScenarioActions.values()):
       for (action, args, result, next_state, properties) in transitions:
         argslists[action].append(args) # append not extend
-
+    print("22222222222222222")
     # If more than one scenario in product, there may be duplicates - use sets
     scenarioArgslists = dict([(action, set(args))
                               for (action,args) in list(argslists.items())])
-    # print 'scenarioArgslists %s' % scenarioArgslists
-  
+    print('scenarioArgslists', scenarioArgslists)
+    print("33333333333333333")
+
     # Pass scenarioArgslists to ModelProgram EnabledTransitions
     # so any observable actions can use these argslists
+
+    # TODO: MUST DO THIS FOR EACH PERMUTATION
+    #
+    # for m in self.mp if isinstance(self.mp[m], ModelProgram):
+    #     self.mp[m].EnabledTransitions(scenarioArgslists, cleanup)
     enabledModelActions = \
          dict([(m, self.mp[m].EnabledTransitions(scenarioArgslists, cleanup))
                for m in self.mp if isinstance(self.mp[m], ModelProgram)])
-    # print 'enabledModelActions %s' % enabledModelActions # DEBUG
-    
+    print('enabledModelActions', enabledModelActions) # DEBUG
+    print("44444444444444444")
     # Combine enabled actions dictionaries (they have distinct keys)
     enabledActions = dict()
     enabledActions.update(enabledScenarioActions) # FSM and TestSuite
     enabledActions.update(enabledModelActions)    # ModelProgam
-    # print 'enabledActions %s' % enabledActions # DEBUG
+    print ('enabledActions', enabledActions) # DEBUG
 
     # set (with no duplicates) of all (aname, args, result) in enabledActions
-    transitions = set([(a.__name__, args, result) 
-                        for (a,args,result,next,properties) in 
+    transitions = OrderedSet([(a.__name__, args, result)
+                        for (a,args,result,next,properties) in
                            reduce(concat,list(enabledActions.values()))])
-    # print 'transitions %s' % transitions
+    print ('transitions inside mp', transitions)
 
-    # dict from (aname, args, result) 
+    # dict from (aname, args, result)
     # to set of all m where (aname, args, result) is enabled
     # this dict can be compared to self.vocabularies
     invocations = \
         dict([((aname, args, result),
-               set([ m for m in self.mp
-                     if (aname,args,result) in 
+               OrderedSet([ m for m in self.mp
+                     if (aname,args,result) in
                      [(a.__name__, argsx, resultx) # argsx,resultx is inner loop
                       for (a,argsx,resultx,next,properties) in enabledActions[m]]]))
               for (aname, args, result) in transitions ])
@@ -182,14 +261,14 @@ class ProductModelProgram(object):
 
     # Now we have all enabled (action,args,result), now rearrange the data
 
-    # for each enabled (aname,args), associate next states and properties by mp 
+    # for each enabled (aname,args), associate next states and properties by mp
     # all enabled [(aname,args,result,{m1:(next1,properties1),m2:...}), ...]
     enabledTs = \
-        [(aname, args, result, 
-          dict([(m, [(next,properties) 
+        [(aname, args, result,
+          dict([(m, [(next,properties)
                      for (a,argsx,resultx,next,properties) in enabledActions[m]
                      # ...[0] to extract item from singleton list
-                     if a.__name__ == aname 
+                     if a.__name__ == aname
                      and (argsx == args or argsx == ())][0]
                  if m in # aname,args or aname,() is enabled in m
                  invocations[aname,args,result] | invocations.get((aname,(),
@@ -199,7 +278,7 @@ class ProductModelProgram(object):
                  else (self.mp[m].Current(), self.mp[m].Properties()))
                 for m in self.mp ]))
          for (aname, args, result) in enabledAnameArgs ]
-  
+
     # print 'enabledTs %s' % enabledTs # DEBUG
 
     # combine result and properties from all the mp
@@ -208,14 +287,14 @@ class ProductModelProgram(object):
                              # dict of next states: {m:next1,m2:next2, ... }
                              dict([ (m,mdict[m][0]) for m in mdict ]),
                              # combined properties
-                             self.NextProperties(dict([ (m,mdict[m][1]) 
+                             self.NextProperties(dict([ (m,mdict[m][1])
                                                    for m in mdict ])))
                            for (aname,args,result,mdict) in enabledTs ]
     return mpEnabledTransitions
-  
+
   def Accepting(self):
     return self.Properties()['accepting']
-  
+
   def StateInvariant(self):
     return self.Properties()['stateinvariant']
 
@@ -225,25 +304,25 @@ class ProductModelProgram(object):
     """
     Combine properties of mps in the current state
     """
-    return { 'accepting': 
+    return { 'accepting':
              # all mp in the current state are in their accepting states
              all([ m.Properties()['accepting'] for m in list(self.mp.values()) ]),
-             'statefilter': 
+             'statefilter':
              all([ m.Properties()['statefilter'] for m in list(self.mp.values()) ]),
-             'stateinvariant': 
+             'stateinvariant':
              all([ m.Properties()['stateinvariant'] for m in list(self.mp.values()) ])
-             } 
-  
+             }
+
   def NextProperties(self, next_properties):
     """
     Combine properties of mps in the next state
-    """ 
-    return { 'accepting': 
+    """
+    return { 'accepting':
              # all mp in the next state are in their accepting states
              all([ next_properties[m]['accepting'] for m in next_properties]),
-             'statefilter': 
+             'statefilter':
              all([ next_properties[m]['statefilter'] for m in next_properties]),
-             'stateinvariant': 
+             'stateinvariant':
              all([ next_properties[m]['stateinvariant'] for m in next_properties])
              }
 
@@ -278,3 +357,10 @@ class ProductModelProgram(object):
     """
     for m in self.mp:
       self.mp[m].Restore(state[m])
+
+  def RestartModel(self):
+    """
+    Restart the model to change action permutations
+    """
+    for m in self.mp:
+      self.mp[m].RestartModel()
