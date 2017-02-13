@@ -48,8 +48,8 @@ def explore(mp, maxTransitions):
         current = frontier[0]   # head, keep in mind current might lead nowhere
         frontier = frontier[1:] # tail
         icurrent = states.index(current) # might already be there
-        print('current %s' % current) # DEBUG
-        print ('   frontier %s' % frontier) # DEBUG
+        # print('current %s' % current) # DEBUG
+        # print ('   frontier %s' % frontier) # DEBUG
         explored.append(current) # states we checked, some might lead nowhere
         mp.Restore(deepcopy(current)) # assign state in mp, need deepcopy here
         transitions = mp.EnabledTransitions(list()) # all actions, not cleanup
@@ -58,7 +58,7 @@ def explore(mp, maxTransitions):
             finished.append(icurrent)
           else:
             deadend.append(icurrent)
-        print ('current %s, transitions %s' % (current, transitions)) # DEBUG
+        # print ('current %s, transitions %s' % (current, transitions)) # DEBUG
         for (aname, args, result, next, next_properties) in transitions:
           # EnabledTransitions doesn't return transitions where not statefilter
           # if next_properties['statefilter']:
@@ -67,11 +67,11 @@ def explore(mp, maxTransitions):
                     # append for breadth-first, push on head for depth-first
                     frontier.append(next) # frontier contents are already copies
                 transition = (current, (aname, args, result), next)
-                print ('transition', transition) # DEBUG
+                # print ('transition', transition) # DEBUG
                 # current = next # IDEA if actions are "not isolated"
                 if transition not in fsm:
                     counter += 1
-                    print(counter, "  :  !!!!!!!!!!!!!!!!!!!!",transition,"!!!!!!!!!!!!!!!")
+                    # print("# Transition ", counter, ": ", transition)
                     fsm.append(transition)
                     if current not in states:
                         states.append(current)
@@ -90,7 +90,6 @@ def explore(mp, maxTransitions):
                         unsafe.append(inext)
                     # TK likewise dead states ... ?
                 if (current != next):
-                    print("cooooccccoooobbbellllooooooooo")
                     continue
             else: # found transition that will not be included in graph
                 frontier.insert(0,current) # not completely explored after all
@@ -99,8 +98,8 @@ def explore(mp, maxTransitions):
             # end if < ntransitions else ...
         # end for transitions
       # end while frontier
-      mp.RestartModel()
-    #   explore(mp, maxTransitions)
+      if mp.recursive_restart: # Added to mp by ProductModelProgram
+          mp.RestartModel()
       # continue exploring test suite with multiple runs
       more_runs = False
       if mp.TestSuite:
@@ -161,8 +160,11 @@ def save(name):
     f.writelines([ actiondef(aname)+'\n' for aname in anames ])
     f.write('\n# states, key of each state here is its number in graph etc. below\n\n')
     f.write('states = {\n')
+    written_states = list()
     for i,s in enumerate(states):
-        f.write('  %s\n' % state(i,s))
+        if s not in written_states:
+            f.write('  %s\n' % state(i,s))
+        written_states.append(s)
     f.write('}\n')
     f.write('\n# initial state, accepting states, unsafe states, frontier states, deadend states\n\n')
     f.write('%s\n' % initial_state())
@@ -174,6 +176,10 @@ def save(name):
     f.write('%s\n' % runstarts_states())
     f.write('\n# finite state machine, list of tuples: (current, (action, args, result), next)\n\n')
     f.write('graph = (\n')
-    f.writelines([ '  %s,\n' % transition(t) for t in graph ])
+    tmp_graph = list()
+    for t in graph:
+        if t not in tmp_graph:
+            tmp_graph.append(t)
+    f.writelines([ '  %s,\n' % transition(t) for t in tmp_graph ])
     f.write(')\n')
     f.close()

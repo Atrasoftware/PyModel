@@ -12,6 +12,66 @@ import itertools
 from model import Model
 import collections
 
+
+class OrderedSet(collections.MutableSet):
+
+    def __init__(self, iterable=None):
+        self.end = end = []
+        end += [None, end, end]         # sentinel node for doubly linked list
+        self.map = {}                   # key --> [key, prev, next]
+        if iterable is not None:
+            self |= iterable
+
+    def __len__(self):
+        return len(self.map)
+
+    def __contains__(self, key):
+        return key in self.map
+
+    def add(self, key):
+        if key not in self.map:
+            end = self.end
+            curr = end[1]
+            curr[2] = end[1] = self.map[key] = [key, curr, end]
+
+    def discard(self, key):
+        if key in self.map:
+            key, prev, next = self.map.pop(key)
+            prev[2] = next
+            next[1] = prev
+
+    def __iter__(self):
+        end = self.end
+        curr = end[2]
+        while curr is not end:
+            yield curr[0]
+            curr = curr[2]
+
+    def __reversed__(self):
+        end = self.end
+        curr = end[1]
+        while curr is not end:
+            yield curr[0]
+            curr = curr[1]
+
+    def pop(self, last=True):
+        if not self:
+            raise KeyError('set is empty')
+        key = self.end[1][0] if last else self.end[2][0]
+        self.discard(key)
+        return key
+
+    def __repr__(self):
+        if not self:
+            return '%s()' % (self.__class__.__name__,)
+        return '%s(%r)' % (self.__class__.__name__, list(self))
+
+    def __eq__(self, other):
+        if isinstance(other, OrderedSet):
+            return len(self) == len(other) and list(self) == list(other)
+        return set(self) == set(other)
+
+
 class ModelProgram(Model):
 
   def __init__(self, module, exclude, include):
@@ -39,11 +99,11 @@ class ModelProgram(Model):
       self.module.StateInvariant = self.module.state_invariant
     if hasattr(self.module, 'reset'):
       self.module.Reset = self.module.reset
-    if hasattr(self.module, 'check_state_changes'):
-      print("!!!!!!!!!!!!!!!CONTROLLO")
-      self.check_state_changes = True
+    # if hasattr(self.module, 'check_state_changes'):
+    # #   print("!!!!!!!!!!!!!!!CONTROLLO")
+    #   self.check_state_changes = True
     if hasattr(self.module, 'restart'):
-      self.restart = self.module.restart
+      self.Restart = self.module.restart
 
     # assign defaults to optional attributes
     # cleanup and observables are handled in Models base class
@@ -59,11 +119,11 @@ class ModelProgram(Model):
       self.module.StateFilter = self.TrueDefault
     if not hasattr(self.module, 'StateInvariant'):
       self.module.StateInvariant = self.TrueDefault
-    if not hasattr(self.module, 'check_state_changes'):
-      print("!!!!!!!!!!  NON  !!!!!CONTROLLO")
-      self.check_state_changes = False
+    # if not hasattr(self.module, 'check_state_changes'):
+    # #   print("!!!!!!!!!!  NON  !!!!!CONTROLLO")
+    #   self.check_state_changes = False
     if not hasattr(self.module, 'restart'):
-      self.restart = self.TrueDefault
+      self.Restart = self.TrueDefault
 
 
     # Make copies of collections that may be altered by post_init
@@ -150,13 +210,14 @@ class ModelProgram(Model):
     """
     enabled = list()
     for a in actions:
+    #   print("Actions: ", actions)
+    #   print("a: ", a)
       for args in argslists[a]:
         if self.ActionEnabled(a, args):
           next_action = self.GetNext(a,args)
-          enabled += [(a, args) + next_action # (a,args,result,next,prop's)
-                     ]
-        if self.check_state_changes:
-          print("============================", next_action)
+          enabled += [(a, args) + next_action] # (a,args,result,next,prop's)
+        if self.recursive_restart: # Added to mp by ProductModelProgram
+        #   print("============================", next_action)
           if (next_action[2]['statechanged']):
             return [(a,args,result,next,properties)
                     for (a,args,result,next,properties) in enabled
@@ -172,10 +233,10 @@ class ModelProgram(Model):
      (action, args, result, next state, properties)
     """
     actions = self.cleanup if cleanup else self.actions
-    controllableActions = set(actions) - set(self.module.observables)
-    observableActions = set(argslists.keys()) & set(self.module.observables)
+    controllableActions = OrderedSet(actions) - OrderedSet(self.module.observables)
+    observableActions = OrderedSet(argslists.keys()) & OrderedSet(self.module.observables)
     if cleanup:
-      observableActions = set(observableActions) & set(self.cleanup)
+      observableActions = OrderedSet(observableActions) & OrderedSet(self.cleanup)
     enabled = list()
     # Controllable actions use self.argslists assigned by ParamGen
     enabled += self.Transitions(controllableActions, self.argslists)
@@ -211,15 +272,15 @@ class ModelProgram(Model):
     """
     saved = self.Current()
     result = self.DoAction(a, args)
-    print("&&&&&&&&&&&&&&&&&RRESSSULLLLLTTT", result)
+    # print("&&&&&&&&&&&&&&&&&RRESSSULLLLLTTT", result)
     next = self.Current()
-    print("&&&&&&&&&&&&&&&&&SAVED ", saved, "NNEXTTT ", next)
+    # print("&&&&&&&&&&&&&&&&&SAVED ", saved, "NNEXTTT ", next)
     stateChanged = False if (saved == next) else True
     properties = self.Properties(stateChanged) # accepting state, etc.
-    print("&&&&&&&&&&&&&&&&&PROPERTIES", properties)
+    # print("&&&&&&&&&&&&&&&&&PROPERTIES", properties)
     self.Restore(saved)
-    print("&&&&&&&&&&&&&&&&&PROPERTIES", properties)
+    # print("&&&&&&&&&&&&&&&&&PROPERTIES", properties)
     return (result, next, properties)
 
   def RestartModel(self):
-      return self.restart()
+      return self.Restart()

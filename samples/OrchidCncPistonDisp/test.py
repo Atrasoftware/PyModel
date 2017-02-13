@@ -1,6 +1,6 @@
 cases = [
  ('PowerOn, PowerOff alternate due to enabling conditions',
-  'pmt -n 10 OrchidCncPistonDisp'),
+  'pmt -n 10 -d OrchidCncPistonDisp'),
 
  ('PowerOn, PowerOff alternate, end in non-accepting state',
   'pmt -n 3 OrchidCncPistonDisp'),

@@ -135,6 +135,11 @@ cpd_errors = list()
 state_changes = 0
 cpd_state = str()
 
+out_file = open("test_output.txt","w")
+
+run_counter = 0
+actions_permutations = "?"
+
 loop = asyncio.get_event_loop()
 
 def initModel():
@@ -145,6 +150,18 @@ def initModel():
     global cpd_errors
     global loop
     global tempset_obj
+    global run_counter
+    global out_file
+
+    run_counter += 1
+
+    print("\n**************************************")
+    print("    Starting Model Run:", run_counter, "/", actions_permutations)
+    print("**************************************\n")
+
+    out_file.write("\n*************************")
+    out_file.write(" Starting Model Run: " + str(run_counter) + "/" + str(actions_permutations))
+    out_file.write("*************************\n")
 
     tempset_obj = TempSettings()
     shapes = generator_factory(tempset_obj, server, rserver, loop)
@@ -157,48 +174,11 @@ def initModel():
         PistonDispenser.StoreProgram(
             program_name, program_description, program_gcode, pid)
         )
-
-    # class States(Enum):
-    #     """These states should be the same as in the proto"""
-    #     NOT_HOMED = 0  # Not yet homed
-    #     RUNNING = 1  # Currently executing a program
-    #     ERROR = 2  # Error status
-    #     HOMING = 3  # I'm homing
-    #     IDLE = 4  # I'm waiting for a program, always == to the park position
-    #     PAUSED = 5  # I can just resume
-    #     STOPPED = 6  # Stop command, I can resume or park
-    #     JOG = 7
-
-    # channel = grpc.insecure_channel('localhost:6666')
-    # cpd_stub = interface_pb2.CncPistonDispStub(channel)
-    # cpd_empty = interface_pb2.Empty()
-    # get_stats = interface_pb2.Settings()
-    # set_stats = interface_pb2.Settings()
     state_changes = 0
+    out_file.write(str(PistonDispenser._gcode_machine.state_history))
     cpd_state = '->' + PistonDispenser._gcode_machine.state_history.pop(0).name
-    print("* Must be NOT_HOMED, but it is: ", cpd_state)
-    print("* Must be NULL, but it is: ", PistonDispenser._gcode_machine.state_history)
-    # state_watcher = Watcher(PistonDispenser._gcode_machine.state.name)
 
-    # def cpd_status_watcher():
-    #     global state_watcher
-    #     while True:
-    #         state_watcher.set_value(PistonDispenser._gcode_machine.state.name)
-    #
-    # thread = threading.Thread(target=cpd_status_watcher, args=())
-    # thread.daemon = True
-    # thread.start()
-
-    # def cpd_status_streamer():
-    #   machine_status = cpd_stub.MachineStatus(cpd_empty)
-    #   global cpd_state
-    #   for current in machine_status:
-    #     cpd_state = current.state
-    #
-    # thread = threading.Thread(target=cpd_status_streamer, args=())
-    # thread.daemon = True
-    # thread.start()
-    # ### Model
+#### Model
 
 initModel()
 
@@ -221,18 +201,20 @@ def update_errors():
         cpd_errors.append(kind)
 
 def resolve_error(x):
+    global out_file
     global cpd_state
     global cpd_errors
-    print("resolve error action...")
+    out_file.write("\n>> resolve error action...")
     PistonDispenser.cleared_error_listener(x, True,
         error_names[error_sources.index(x)])
     update_errors()
     update_state()
 
 def block_everything(x):
+    global out_file
     global cpd_state
     global cpd_errors
-    print("block everything action...")
+    out_file.write("\n>> block everything action...")
     loop.run_until_complete(
       PistonDispenser.block_everything(
         x, False, error_names[error_sources.index(x)]))
@@ -240,18 +222,20 @@ def block_everything(x):
     update_errors()
 
 def block_program_start(x):
+    global out_file
     global cpd_state
     global cpd_errors
-    print("block program start action...")
+    out_file.write("\n>> block program start action...")
     PistonDispenser.block_program_start(
         x, False, error_names[error_sources.index(x)])
     update_state()
     update_errors()
 
 def require_homing(x):
+    global out_file
     global cpd_state
     global cpd_errors
-    print("require homing action...")
+    out_file.write("\n>> require homing action...")
     loop.run_until_complete(
       PistonDispenser.stop_and_require_homing(
         x, False, error_names[error_sources.index(x)]))
@@ -259,9 +243,10 @@ def require_homing(x):
     update_errors()
 
 def spr():
+    global out_file
     global cpd_state
     global cpd_errors
-    print("spr action...")
+    out_file.write("\n>> spr action...")
     loop.run_until_complete(PistonDispenser.Start(pid))
     time.sleep(0.1)
     loop.run_until_complete(PistonDispenser.Pause())
@@ -272,47 +257,52 @@ def spr():
     update_errors()
 
 def homing():
+    global out_file
     global cpd_state
     global cpd_errors
-    print("homing action...")
+    out_file.write("\n>> homing action...")
     loop.run_until_complete(PistonDispenser.Homing())
-    print(PistonDispenser._gcode_machine.state_history)
+    out_file.write(str(PistonDispenser._gcode_machine.state_history))
     update_state()
     update_errors()
 
 def start():
+    global out_file
     global cpd_state
     global cpd_errors
-    print("start action...")
+    out_file.write("\n>> start action...")
     loop.run_until_complete(PistonDispenser.Start(pid))
-    print(PistonDispenser._gcode_machine.state_history)
+    out_file.write(str(PistonDispenser._gcode_machine.state_history))
     update_state()
     update_errors()
 
 def stop():
+    global out_file
     global cpd_state
     global cpd_errors
-    print("stop action...")
+    out_file.write("\n>> stop action...")
     loop.run_until_complete(PistonDispenser.Stop())
-    print(PistonDispenser._gcode_machine.state_history)
+    out_file.write(str(PistonDispenser._gcode_machine.state_history))
     update_state()
     update_errors()
 
 def pause():
     global cpd_state
+    global out_file
     global cpd_errors
-    print("pause action...")
+    out_file.write("\n>> pause action...")
     loop.run_until_complete(PistonDispenser.Pause())
-    print(PistonDispenser._gcode_machine.state_history)
+    out_file.write(str(PistonDispenser._gcode_machine.state_history))
     update_state()
     update_errors()
 
 def resume():
+    global out_file
     global cpd_state
     global cpd_errors
-    print("resume action...")
+    out_file.write("\n>> resume action...")
     loop.run_until_complete(PistonDispenser.Resume())
-    print(PistonDispenser._gcode_machine.state_history)
+    out_file.write(str(PistonDispenser._gcode_machine.state_history))
     update_state()
     update_errors()
 
@@ -324,11 +314,8 @@ def Accepting():
 
 def RestartModel():
     global loop
-    print(tempset_obj.SPECIFIC_SETTINGS)
     for task in asyncio.Task.all_tasks(loop):
         task.cancel()
-    # loop.close()
-    print(tempset_obj.SPECIFIC_SETTINGS)
     initModel()
 
 # needed for multiple test runs in one session
@@ -342,7 +329,12 @@ state = ('cpd_state',)
 check_state_changes = True
 
 restart = RestartModel
-actions = (start, stop, homing, )
+actions = (start, stop, homing, require_homing, resolve_error,)
+factor = len(actions)
+actions_permutations = 1
+while (factor > 0):
+    actions_permutations *= factor
+    factor -= 1
 enablers = {}
 domains = {
     block_everything: {

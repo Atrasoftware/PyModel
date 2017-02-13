@@ -15,11 +15,12 @@ def main():
         exit()
     else:
         mp = ProductModelProgram(options, args)
-
-        # TODO::::::: for ALL PERMUTATIONS OF mp.mp.[a].actions
         for a in args:
-            for permutation in itertools.permutations(mp.mp[a].actions):
-                mp.mp[a].actions = permutation
+            if options.recursive_restart:
+                for permutation in itertools.permutations(mp.mp[a].actions):
+                    mp.mp[a].actions = permutation
+                    Analyzer.explore(mp, options.maxTransitions)
+            else:
                 Analyzer.explore(mp, options.maxTransitions)
         print(('%s states, %s transitions, %s accepting states, %s unsafe states' % \
             (len(Analyzer.states),len(Analyzer.graph),len(Analyzer.accepting),len(Analyzer.unsafe))))

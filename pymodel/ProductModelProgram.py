@@ -87,20 +87,14 @@ class OrderedSet(collections.MutableSet):
         return set(self) == set(other)
 
 
-if __name__ == '__main__':
-    s = OrderedSet('abracadaba')
-    t = OrderedSet('simsalabim')
-    print(s | t)
-    print(s & t)
-    print(s - t)
-
-
 class ProductModelProgram(object):
 
   def __init__(self, options, args):
     self.TestSuite = False # used by pmt nruns logic
     self.module = dict()  # dict of modules keyed by name
     self.mp = dict()      # dict of model programs keyed by same module name
+    self.recursive_restart = options.recursive_restart \
+        if (hasattr(options, 'recursive_restart')) else False
 
     # Populate self.module and self.mp from modules named in command line args
     # Models that users write are just modules, not classes (types)
@@ -109,24 +103,25 @@ class ProductModelProgram(object):
     for mname in args: # args is list of module name
       self.module[mname] = __import__(mname)
       if hasattr(self.module[mname], 'graph'):
-        print("^^^^^^^^^^^^^^^^^^1111111111")
+        # print("^^^^^^^^^^^^^^^^^^1111111111")
         self.mp[mname] = FSM(self.module[mname],options.exclude,options.action)
       # for backwards compatibility we accept all of these test_suite variants
       elif (hasattr(self.module[mname], 'testSuite') or
             hasattr(self.module[mname], 'testsuite') or
             hasattr(self.module[mname], 'test_suite')):
-        print("^^^^^^^^^^^^^^^^^^22222222222")
+        # print("^^^^^^^^^^^^^^^^^^22222222222")
         self.mp[mname] = TestSuite(self.module[mname],
                                    options.exclude, options.action)
         self.TestSuite = True # used by pmt nruns logic
       elif self.module[mname].__doc__.strip().upper().startswith('PYMODEL CONFIG'):
-        print("^^^^^^^^^^^^^^^^^^33333333333333")
+        # print("^^^^^^^^^^^^^^^^^^33333333333333")
         pass # configuration module, merely importing it did all the work
       else:
         # got this far, should be a ModelProgram -- if not, crash
-        print("^^^^^^^^^^^^^^^^^^4444444444444444")
+        # print("^^^^^^^^^^^^^^^^^^4444444444444444")
         self.mp[mname] = ModelProgram(self.module[mname],
                                       options.exclude, options.action)
+      self.mp[mname].recursive_restart = self.recursive_restart
 
     # Now that all modules have been imported and executed their __init__
     #  do a postprocessing pass over all model objects
@@ -192,24 +187,24 @@ class ProductModelProgram(object):
 
     # Built up dicts from mp name to list of all its enabled
     #  (action, args, result, next state, properties)
-    print("00000000000000000000")
+    # print("00000000000000000000")
     # dict for FSM and TestSuite only, they might provide args for observables
     enabledScenarioActions = \
         dict([(m, self.mp[m].EnabledTransitions(cleanup))
               for m in self.mp if (not isinstance(self.mp[m], ModelProgram))])
-    print('enabledScenarioActions', enabledScenarioActions) # DEBUG
-    print("11111111111111111111")
+    # print('enabledScenarioActions', enabledScenarioActions) # DEBUG
+    # print("11111111111111111111")
     # dict from action to sequence of argslists
     argslists = defaultdict(list)
     for transitions in list(enabledScenarioActions.values()):
       for (action, args, result, next_state, properties) in transitions:
         argslists[action].append(args) # append not extend
-    print("22222222222222222")
+    # print("22222222222222222")
     # If more than one scenario in product, there may be duplicates - use sets
     scenarioArgslists = dict([(action, set(args))
                               for (action,args) in list(argslists.items())])
-    print('scenarioArgslists', scenarioArgslists)
-    print("33333333333333333")
+    # print('scenarioArgslists', scenarioArgslists)
+    # print("33333333333333333")
 
     # Pass scenarioArgslists to ModelProgram EnabledTransitions
     # so any observable actions can use these argslists
@@ -221,19 +216,19 @@ class ProductModelProgram(object):
     enabledModelActions = \
          dict([(m, self.mp[m].EnabledTransitions(scenarioArgslists, cleanup))
                for m in self.mp if isinstance(self.mp[m], ModelProgram)])
-    print('enabledModelActions', enabledModelActions) # DEBUG
-    print("44444444444444444")
+    # print('enabledModelActions', enabledModelActions) # DEBUG
+    # print("44444444444444444")
     # Combine enabled actions dictionaries (they have distinct keys)
     enabledActions = dict()
     enabledActions.update(enabledScenarioActions) # FSM and TestSuite
     enabledActions.update(enabledModelActions)    # ModelProgam
-    print ('enabledActions', enabledActions) # DEBUG
+    # print ('enabledActions', enabledActions) # DEBUG
 
     # set (with no duplicates) of all (aname, args, result) in enabledActions
     transitions = OrderedSet([(a.__name__, args, result)
                         for (a,args,result,next,properties) in
                            reduce(concat,list(enabledActions.values()))])
-    print ('transitions inside mp', transitions)
+    # print ('transitions inside mp', transitions)
 
     # dict from (aname, args, result)
     # to set of all m where (aname, args, result) is enabled

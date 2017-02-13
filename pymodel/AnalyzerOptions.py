@@ -4,7 +4,7 @@ Options and arguments for PyModel Analyzer
 
 from optparse import OptionParser
 
-usage = """pma [options] models  
+usage = """pma [options] models
 
 PyModel Analyzer. models is a list of one or more module names (with
 no .py suffix).  Each module named in models must contain a model,
@@ -25,14 +25,17 @@ command.
 parser = OptionParser(usage=usage)
 
 def parse_args():
-  parser.add_option('-a', '--action', action="append", 
+  parser.add_option('-a', '--action', action="append",
                   help='Action to include in generated FSM, as many as needed, if no -a include all actions')
-  parser.add_option('-e', '--exclude', action="append", 
+  parser.add_option('-e', '--exclude', action="append",
                   help='Action to exclude from generated FSM, as many as needed')
-  parser.add_option('-m', '--maxTransitions', type="int", default=100, 
-                  help = 'Maximum number of transitions to include in the generated FSM, default 100')
+  parser.add_option('-m', '--maxTransitions', type="int", default=100,
+                  help='Maximum number of transitions to include in the generated FSM, default 100')
   parser.add_option('-o', '--output', type='string', default='',
-                  help = 'Output module name (with no .py suffix), default is <first argument>FSM')
+                  help='Output module name (with no .py suffix), default is <first argument>FSM')
+  parser.add_option('-r', '--recursive', action="store_true", dest="recursive_restart",
+                  default=False,
+                  help='Analyze with recursive model restart strategy')
   return parser.parse_args()
 
 def print_help():

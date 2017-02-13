@@ -13,7 +13,7 @@ cases = [
      'dotsvg ScenariosFSM'),
 
     ('Generate FSM from OrchidCncPistonDisp model program',
-     'pma OrchidCncPistonDisp'),
+     'pma -r -m 1000 OrchidCncPistonDisp'),
 
     ('Generate dot graphics commands from generated OrchidCncPistonDispFSM',
      'pmg -n OrchidCncPistonDispFSM'),

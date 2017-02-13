@@ -33,7 +33,7 @@ class FSM(Model):
     self.graph = [ (current, (action,args,result), next)
                    for (current, (action,args,result), next) in
                    self.module.graph if action in self.actions ]
-    print("GGGRRRAAAAAPPPPHHH         ", self.graph)
+    # print("GGGRRRAAAAAPPPPHHH         ", self.graph)
     # prepare for first run
     self.current = self.module.initial # raise exception if module is not FSM
 
@@ -81,7 +81,7 @@ class FSM(Model):
     (action, args, next state, properties)
     """
     graph = self.CleanupGraph(cleanup)
-    print("*******************GGGRRRAAAAAPPPPHHH         ", graph)
+    # print("*******************GGGRRRAAAAAPPPPHHH         ", graph)
 
     return [(action, args, result, next, self.make_properties(next))
             for (current,(action,args,result),next) in graph

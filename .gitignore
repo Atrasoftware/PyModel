@@ -64,3 +64,4 @@ samples/OrchidCncPistonDisp/programs/
 
 # trash
 pythonpath_append.txt
+test_output.txt
